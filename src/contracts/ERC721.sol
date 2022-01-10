@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract ERC721{
+import './ERC165.sol';
+import './interfaces/IERC721.sol';
+
+contract ERC721 is IERC721, ERC165{
     /*
     Building out the minting function
         a. nft to point to an address
@@ -19,11 +22,12 @@ contract ERC721{
     mapping (address => uint) private ownedTokensCount;
 
     mapping (uint => address) private tokenApprovals;
-    event Transfer(
-        address indexed from, 
-        address indexed to, 
-        uint indexed tokenID);
-
+    
+    constructor(){
+        ERC721 instance;
+        bytes4 interface_id = instance.balanceOf.selector ^ instance.ownerOf.selector ^ instance.transferFrom.selector;
+        _registerInterface(bytes4(interface_id));
+    }
     function _mint(address to, uint tokenID) internal virtual {
         require(to != address(0), "ERC721: Address must not be 0!");
         require(tokenOwners[tokenID] == address(0), "ERC721: Token already minted");
@@ -67,7 +71,7 @@ contract ERC721{
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function transferFrom(address _from, address _to, uint256 _tokenId) external payable{
+    function _transferFrom(address _from, address _to, uint256 _tokenId) internal {
         require(_to != address(0), '');
         require(ownerOf(_tokenId) == _from, "From address does not own the NFT");
         require(msg.sender == tokenOwners[_tokenId] ||
@@ -81,5 +85,25 @@ contract ERC721{
         emit Transfer(_from, _to, _tokenId);
     }
 
+    function transferFrom(address _from, address _to, uint256 _tokenId) external payable{
+        _transferFrom(_from, _to, _tokenId);
+    }
+
+    
+    /// @notice Change or reaffirm the approved address for an NFT
+    /// @dev The zero address indicates there is no approved address.
+    ///  Throws unless `msg.sender` is the current NFT owner, or an authorized
+    ///  operator of the current owner.
+    /// @param _approved The new approved NFT controller
+    /// @param _tokenId The NFT to approve
+    function approve(address _approved, uint256 _tokenId) external payable{
+        address owner = ownerOf(_tokenId);
+        require(msg.sender == owner, "You must be the token owner to approve someone!");
+        require(_approved == owner, "The owner can't be approved!");
+        
+        tokenApprovals[_tokenId] = _approved;
+
+        emit Approval(owner, _approved, _tokenId);
+    }
 
 }
